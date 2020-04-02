@@ -1,0 +1,50 @@
+version: '3'
+services:
+  traefik:
+    image: traefik:latest
+    restart: always
+    container_name: traefik
+    ports:
+      - "80:80"
+      - "8080:8080"
+    command:
+        - --api.insecure=true
+        - --api.dashboard=true
+        - --api.debug=true
+        - --log.level=DEBUG
+        - --providers.docker=true
+        - --providers.docker.exposedbydefault=false
+        - --providers.docker.network=web
+        - --entrypoints.web.address=:80
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`monitor.nicolas.my.id`)"
+      - "traefik.http.routers.api.service=api@internal"
+
+  collabora_code:
+    image: collabora/code
+    restart: always
+    expose:
+      - 9980
+    networks:
+      - web
+      - backend
+    environment:
+      - username=admin
+      - password=MaksureYouAre!UseSecurePa12@
+      - DONT_GEN_SSL_CERT=true
+      - "domain=cloud\\.nicolas\\.my\\.id"
+      - "extra_params=--o:ssl.enable=false --o:ssl.termination=true --o:storage.wopi.host[0]=::ffff:[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+ --o:net.post_allow.host[0]=::ffff:[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+ --o:storage.wopi.host[1]=[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+ --o:net.post_allow.host[1]=[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+ --o:storage.wopi.host[2]=cloud.nicolas.my.id"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.collabora-web.rule=Host(`office.nicolas.my.id`)"
+      - "traefik.http.routers.collabora-web.entrypoints=web"
+networks:
+  web:
+    external: true
+  backend:
+    external: false
